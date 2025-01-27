@@ -1,0 +1,16 @@
+{
+  "name": "back_up_mongo",
+  "version": "1.0.0",
+  "description": "script for backing up mongo clusters",
+  "main": "main.js",
+  "type": "module",
+  "scripts": {
+    "test": "node main.js"
+  },
+  "author": "PatricioGabriel22",
+  "license": "ISC",
+  "dependencies": {
+    "@types/node": "^22.10.10",
+    "typescript": "^5.7.3"
+  }
+}
