@@ -2,19 +2,23 @@ import { exec } from 'child_process'
 import { fileURLToPath } from 'url'
 import path from 'path'
 import fs from 'fs'
+import {connectDB} from './config/mongoDB.js'
+// import {ArchivoSchema} from './config/schema.js'
 
 
 
 
 
-
-function crearCarpetaBackup(){
+function crearCarpetaBackup(dbAppName){
     const fecha = new Date()
     const rutaDeEsteScript = fileURLToPath(import.meta.url)
     // const rutaDelFirectorio = path.join(__dirname,fecha)
     const __dirname = path.dirname(rutaDeEsteScript)
-    const rutaCarpetaPincipal = path.join(__dirname, "backups")
-    const nombreCarpeta = `Backup ${fecha.getDate().toString()}-${fecha.getMonth()+1}-${fecha.getFullYear()}`
+
+    const nombreDBorApp = dbAppName
+
+    const rutaCarpetaPincipal = path.join(__dirname,"backups",nombreDBorApp)
+    const nombreCarpeta = `Backup 2 ${fecha.getDate().toString()}-${fecha.getMonth()+1}-${fecha.getFullYear()}`
     const rutaDirectorio = path.join(rutaCarpetaPincipal,nombreCarpeta) //uno dinamicamente los caminos de la ruta donde se crea la carpeta donde se haca cada backup. "Backups" es la general
     
     if(!fs.existsSync(rutaCarpetaPincipal)) fs.mkdirSync(rutaCarpetaPincipal)
@@ -58,7 +62,7 @@ export function restoreOrBackupMongo(comandoAEjecutar,dbPassword,dbName){
 
 
     const comando = decidirComando(comandoAEjecutar,dbPassword,dbName)
-    const carpeta = crearCarpetaBackup()
+    const carpeta = crearCarpetaBackup(dbName)
     console.log(carpeta)
     exec(comando.modo,{cwd:`${carpeta}`},(error,stdout,stderr)=>{
         console.log(comando.msg)
