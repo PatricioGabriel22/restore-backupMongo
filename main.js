@@ -2,14 +2,16 @@ import { exec } from 'child_process'
 import { fileURLToPath } from 'url'
 import path from 'path'
 import fs from 'fs'
-import {connectDB} from './config/mongoDB.js'
-// import {ArchivoSchema} from './config/schema.js'
-
+import mongoose from 'mongoose'
+import {ArchivoSchema} from './config/schema.js'
 
 
 
 
 function crearCarpetaBackup(dbAppName){
+
+    if(!fs.existsSync('backups'))  fs.mkdirSync('backups')
+
     const fecha = new Date()
     const rutaDeEsteScript = fileURLToPath(import.meta.url)
     // const rutaDelFirectorio = path.join(__dirname,fecha)
@@ -18,7 +20,7 @@ function crearCarpetaBackup(dbAppName){
     const nombreDBorApp = dbAppName
 
     const rutaCarpetaPincipal = path.join(__dirname,"backups",nombreDBorApp)
-    const nombreCarpeta = `Backup 2 ${fecha.getDate().toString()}-${fecha.getMonth()+1}-${fecha.getFullYear()}`
+    const nombreCarpeta = `Backup ${fecha.getDate().toString()}-${fecha.getMonth()+1}-${fecha.getFullYear()}`
     const rutaDirectorio = path.join(rutaCarpetaPincipal,nombreCarpeta) //uno dinamicamente los caminos de la ruta donde se crea la carpeta donde se haca cada backup. "Backups" es la general
     
     if(!fs.existsSync(rutaCarpetaPincipal)) fs.mkdirSync(rutaCarpetaPincipal)
@@ -29,12 +31,13 @@ function crearCarpetaBackup(dbAppName){
 }
 
 
-function decidirComando(backupOrRestore,dbPassword,dbName){
 
-    const comandoMongoBackUp = `mongodump --uri mongodb+srv://ppuchetadev:${dbPassword}@victorinacluster.ycryc.mongodb.net/${dbName}`
+function decidirComando(backupOrRestore,clusterURL,dbName){
+
+    const comandoMongoBackUp = `mongodump --uri ${clusterURL}${dbName}`
     
-    const comandoMongoRestore= `mongorestore --uri mongodb+srv://ppuchetadev:${dbPassword}@victorinacluster.ycryc.mongodb.net`
-
+    const comandoMongoRestore= `mongorestore --uri ${clusterURL} `
+    //--dir=Base64RestoredFiles/${dbName}/dump --nsInclude=${dbName}.*
     let opciones = {
         modo:'',
         msg:''
@@ -56,26 +59,95 @@ function decidirComando(backupOrRestore,dbPassword,dbName){
     return opciones
 }
 
-export function restoreOrBackupMongo(comandoAEjecutar,dbPassword,dbName){
+
+export async function readFilesAndUploadDB(){
+
+    const directorios = fs.readdirSync('backups')
     
+    const ahora = new Date()
+    const gmt3 = new Date(ahora.getTime() - 3 * 60 * 60 * 1000)
+
     
+    for(let directorio of directorios){
+        let archivos 
+
+        const subDirectorios = fs.readdirSync(path.join('backups',directorio))
+        console.log(subDirectorios)
+
+        await Promise.all(
+
+            subDirectorios.map(async (subDirectorio)=>{
+                let dataFromArchivos = []
+
+                const direccionConData = `backups/${directorio}/${subDirectorio}/dump/${directorio}`
+                archivos = fs.readdirSync(direccionConData)
+    
+                archivos.map((archivo)=>{
+                    dataFromArchivos.push(fs.readFileSync(`${direccionConData}/${archivo}`))
+                })    
+
+                
+                const archivoModel = mongoose.model(`${directorio}`, ArchivoSchema)
+        
+                const target = await archivoModel.findOne({
+                    nombre: `${directorio}`,
+                    fecha: `${subDirectorio}` , 
+                    archivos:dataFromArchivos
+                }) 
+
+                
+                if(!target){
+                    await archivoModel.create({
+                        nombre: `${directorio}`,
+                        fecha: `${subDirectorio}` , 
+                        archivos:dataFromArchivos
+                    })
+                }                
+            })
+
+        )
 
 
-    const comando = decidirComando(comandoAEjecutar,dbPassword,dbName)
-    const carpeta = crearCarpetaBackup(dbName)
-    console.log(carpeta)
-    exec(comando.modo,{cwd:`${carpeta}`},(error,stdout,stderr)=>{
-        console.log(comando.msg)
-        let msg = stdout
-        if(error) msg = error.message
-        if(stderr) msg = stderr
-    
-        console.log(msg)
-        return 
-    })
 
+      
+        
+    }
 
 }
+
+
+
+export async function restoreOrBackupMongo(comandoAEjecutar,clusterURL,dbName){
+        //falta acomodar la parte de la fecha
+
+    const comando = decidirComando(comandoAEjecutar,clusterURL,dbName)
+    const rutaBase64Rest = path.join('Base64RestoredFiles',dbName)
+    const carpeta = comandoAEjecutar === "backup" ? crearCarpetaBackup(dbName) :  rutaBase64Rest
+    
+
+
+    console.log(`Ejecutando script en ${carpeta}`)
+
+    return new Promise((resolve, reject) => {
+        exec(comando.modo, { cwd: `${carpeta}` }, (error, stdout, stderr) => {
+            if (error) {
+                console.error("❌ Error: ", error.message);
+                reject(error);
+                return;
+            }
+            if (stderr) {
+                console.warn("⚠️ Advertencia: ", stderr);
+            }
+
+            console.log("✅ Completado", stdout);
+            resolve(stdout);
+        });
+    });
+}
+
+
+
+
 
 // try {
     
