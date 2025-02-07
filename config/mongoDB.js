@@ -1,5 +1,5 @@
 import mongoose from 'mongoose'
-import { uriClusteForStoreBackupData } from '../dataDBS';
+import { uriClusteForStoreBackupData } from '../dataDBS.js';
 
 export async function connectRestoreScriptCluster() {
     

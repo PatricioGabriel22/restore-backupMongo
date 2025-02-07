@@ -1,0 +1,1 @@
+{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"}],"uuid":"3cf0ffeb91294b65b2e90b92187eb490","collectionName":"horariosDeEntrada","type":"collection"}
