@@ -1,8 +1,8 @@
 import mongoose from 'mongoose'
-
+import { uriClusteForStoreBackupData } from '../dataDBS';
 
 export async function connectRestoreScriptCluster() {
-    const uriClusteForStoreBackupData = 'mongodb+srv://ppuchetadev:6awQJNg5WD5GD6vq@cluster0.7yzio5l.mongodb.net/restoreTool'
+    
     await mongoose.connect(uriClusteForStoreBackupData)
     
         while (mongoose.connection.readyState !== 1) {
